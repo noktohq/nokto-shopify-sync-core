@@ -1,0 +1,8 @@
+﻿{
+  "shopify": {
+    "shop_url": "your-store.myshopify.com",
+    "access_token": "shpat_xxxxxxxxxxxxxxxxxxxx",
+    "location_id": null
+  }
+}
+
