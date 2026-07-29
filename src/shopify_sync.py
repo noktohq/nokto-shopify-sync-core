@@ -1,13 +1,13 @@
-﻿"""
+"""
 Generic Shopify Admin REST client for inventory and price synchronisation.
 
 Installation:
     pip install requests
 
 Configuration (config.json or environment variables):
-    SHOPIFY_SHOP_URL       â€” your-store.myshopify.com
-    SHOPIFY_ACCESS_TOKEN   â€” Admin API access token
-    SHOPIFY_LOCATION_ID    â€” Location ID (optional, auto-detected)
+    SHOPIFY_SHOP_URL       — your-store.myshopify.com
+    SHOPIFY_ACCESS_TOKEN   — Admin API access token
+    SHOPIFY_LOCATION_ID    — Location ID (optional, auto-detected)
 """
 
 import json
@@ -34,7 +34,7 @@ class ShopifySync:
         field_map = {
             "sku":   "article_no",   # key that holds the SKU string
             "qty":   "free_qty",     # key that holds available quantity (int)
-            "price": "list_price",   # key that holds price (float) â€” optional
+            "price": "list_price",   # key that holds price (float) — optional
         }
     """
 
@@ -61,7 +61,7 @@ class ShopifySync:
         self._location_id = location_id
         self._sku_map: dict[str, dict] | None = None
 
-    # â”€â”€ Private HTTP helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Private HTTP helpers ─────────────────────────────────────────────────
 
     def _get(self, endpoint: str, params: dict | None = None) -> Any:
         while True:
@@ -90,7 +90,7 @@ class ShopifySync:
             r.raise_for_status()
             return r.json()
 
-    # â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Setup ────────────────────────────────────────────────────────────────
 
     def get_location_id(self) -> int:
         if self._location_id:
@@ -103,8 +103,10 @@ class ShopifySync:
         return self._location_id
 
     def build_sku_map(self) -> dict[str, dict]:
-        """Returns SKU â†’ variant metadata for every product in the store."""
-        log.info("Building SKU map from Shopifyâ€¦")
+        """Returns SKU → variant metadata for every product in the store (cached)."""
+        if self._sku_map is not None:
+            return self._sku_map
+        log.info("Building SKU map from Shopify…")
         sku_map: dict[str, dict] = {}
         params: dict = {"limit": 250, "fields": "id,variants"}
 
@@ -133,7 +135,7 @@ class ShopifySync:
         log.info("Found %d SKUs in Shopify.", len(sku_map))
         return sku_map
 
-    # â”€â”€ Sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Sync ─────────────────────────────────────────────────────────────────
 
     def sync(
         self,
@@ -158,7 +160,7 @@ class ShopifySync:
         }
 
         total = len(variants)
-        log.info("Syncing %d variantsâ€¦", total)
+        log.info("Syncing %d variants…", total)
 
         for i, variant in enumerate(variants, 1):
             sku = (variant.get(fm["sku"]) or "").strip()
@@ -200,7 +202,7 @@ class ShopifySync:
                 stats["errors"] += 1
 
         log.info(
-            "Done â€” inventory: %d, price: %d, not found: %d, errors: %d",
+            "Done — inventory: %d, price: %d, not found: %d, errors: %d",
             stats["inventory_updated"],
             stats["price_updated"],
             stats["not_found"],
@@ -209,7 +211,7 @@ class ShopifySync:
         return stats
 
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 
 def _parse_next_link(link_header: str) -> str | None:
