@@ -1,4 +1,4 @@
-﻿"""Unit tests for ShopifySync (no network calls)."""
+"""Unit tests for ShopifySync (no network calls)."""
 
 from unittest.mock import MagicMock, patch
 
@@ -7,7 +7,7 @@ import pytest
 from src.shopify_sync import ShopifySync, _parse_next_link, load_config
 
 
-# â”€â”€ _parse_next_link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _parse_next_link ─────────────────────────────────────────────────────────
 
 
 def test_parse_next_link_returns_page_info():
@@ -23,7 +23,7 @@ def test_parse_next_link_returns_none_when_absent():
     assert _parse_next_link('<url>; rel="previous"') is None
 
 
-# â”€â”€ load_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── load_config ──────────────────────────────────────────────────────────────
 
 
 def test_load_config_env_overrides_file(tmp_path, monkeypatch):
@@ -45,7 +45,7 @@ def test_load_config_missing_file_returns_empty(tmp_path):
     assert cfg["shopify"]["shop_url"] == ""
 
 
-# â”€â”€ ShopifySync.sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── ShopifySync.sync ─────────────────────────────────────────────────────────
 
 
 @pytest.fixture

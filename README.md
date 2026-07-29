@@ -1,6 +1,6 @@
-﻿# nokto-shopify-sync-core
+# nokto-shopify-sync-core
 
-Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Handles rate limiting, pagination, and token refresh automatically.
+Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Handles rate limiting and pagination automatically, and supports OAuth client-credentials token acquisition.
 
 ## Installation
 
@@ -10,13 +10,13 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Copy `config.example.json` â†’ `config.json`, or use environment variables:
+Copy `config.example.json` → `config.json`, or use environment variables:
 
 | Variable | Description |
 |---|---|
 | `SHOPIFY_SHOP_URL` | `your-store.myshopify.com` |
 | `SHOPIFY_ACCESS_TOKEN` | Admin API access token |
-| `SHOPIFY_LOCATION_ID` | Location ID (optional â€” auto-detected) |
+| `SHOPIFY_LOCATION_ID` | Location ID (optional — auto-detected) |
 
 ## Usage
 
