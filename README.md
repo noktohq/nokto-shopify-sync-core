@@ -49,6 +49,10 @@ print(stats)
 # {"inventory_updated": 42, "price_updated": 38, "not_found": 3, "errors": 0}
 ```
 
+### Timeouts & retries
+
+Every request times out after 30s by default — override with `ShopifySync(shop_url, access_token, timeout=60)`. Responses rate-limited with `429` are retried automatically (honouring `Retry-After`) up to `ShopifySync.MAX_RETRIES` (5) times, after which the error is raised instead of retrying forever.
+
 ## Tests
 
 ```bash
