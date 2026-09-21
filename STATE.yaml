@@ -1,0 +1,57 @@
+# STATE.yaml — levende status for dette repoet (NOKTO CONTROL TOWER).
+# Schema: nokto-ops/control/schema/state.schema.json. Oppdateres av `nokto stop` — ikke dupliser i README.
+schema_version: 1
+project: nokto-shopify-sync-core — Generisk Shopify Admin REST-klient for SKU-synk (MIT)
+repo: noktohq/nokto-shopify-sync-core
+state: maintenance
+phase: publisert, vedlikehold
+now: null
+next: []
+waiting: []
+blockers: []
+decisions_needed: []
+done:
+- what: 'PR #2 (claude/analyser-repo) merget'
+  at: '2026-09-21'
+  evidence: commit 599009c
+- what: SECURITY.md, FUNDING.yml
+  at: '2026-09-11'
+  evidence: 'PR #3'
+milestones:
+- id: v1
+  title: Initial public implementation
+  status: done
+  date: '2026-06-08'
+  evidence: commit 3fa7d7c
+- id: tester
+  title: 8 tester grønne
+  status: done
+  date: '2026-07-29'
+  evidence: 'PR #1'
+- id: robusthet
+  title: Dedupe paginering, bundet 429-retry, timeouts
+  status: done
+  date: '2026-08-22'
+  evidence: commit 4e48cf5
+- id: security-md
+  title: SECURITY.md + ærlige begrensninger
+  status: done
+  date: '2026-09-11'
+  evidence: 'PR #3'
+environment:
+  runtime: Python 3.12, requests; pytest
+  deploy: pip/npm — bibliotek, ingen deploy
+  url: https://github.com/noktohq/nokto-shopify-sync-core
+  notes: null
+production_status: n/a
+production_note: Bibliotek. Publisert som kildekode på GitHub.
+branch: main
+last_verified_commit: 599009c
+last_checkpoint: null
+last_session: null
+security_findings: []
+updated_at: '2026-09-21T05:37:35Z'
+sources:
+- README.md
+- commits
+- GitHub-snapshot 2026-09-21
