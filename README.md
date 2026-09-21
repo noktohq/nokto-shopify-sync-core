@@ -49,6 +49,10 @@ print(stats)
 # {"inventory_updated": 42, "price_updated": 38, "not_found": 3, "errors": 0}
 ```
 
+### Timeouts & retries
+
+Every request times out after 30s by default — override with `ShopifySync(shop_url, access_token, timeout=60)`. Responses rate-limited with `429` are retried automatically (honouring `Retry-After`) up to `ShopifySync.MAX_RETRIES` (5) times, after which the error is raised instead of retrying forever.
+
 ## Security boundaries
 
 The Admin API access token is read from `config.json` or environment
@@ -58,12 +62,6 @@ vulnerability.
 
 ## Known limitations
 
-- **No bounded retries.** On HTTP 429, `_get`/`_put`/`_post` retry
-  indefinitely using the `Retry-After` header — there is no maximum attempt
-  count or backoff cap.
-- **No request timeout** on the sync calls (`_get`/`_put`/`_post`). Only the
-  OAuth client-credentials token exchange sets a timeout (10s). A hung
-  connection can block `sync()` indefinitely.
 - Non-429 errors are not retried; they are caught per-variant, counted in
   `stats["errors"]`, and logged, and the rest of the batch continues.
 - No dry-run mode — `sync()` writes changes directly to Shopify.

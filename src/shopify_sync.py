@@ -44,11 +44,14 @@ class ShopifySync:
         "price": "price",
     }
 
+    MAX_RETRIES = 5
+
     def __init__(
         self,
         shop_url: str,
         access_token: str,
         location_id: int | None = None,
+        timeout: float = 30.0,
     ) -> None:
         self._base = f"https://{shop_url}/admin/api/{SHOPIFY_API_VERSION}"
         self._session = requests.Session()
@@ -60,35 +63,41 @@ class ShopifySync:
         )
         self._location_id = location_id
         self._sku_map: dict[str, dict] | None = None
+        self._timeout = timeout
 
     # ── Private HTTP helpers ─────────────────────────────────────────────────
 
-    def _get(self, endpoint: str, params: dict | None = None) -> Any:
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        params: dict | None = None,
+        body: dict | None = None,
+    ) -> requests.Response:
+        attempt = 0
         while True:
-            r = self._session.get(f"{self._base}/{endpoint}", params=params)
-            if r.status_code == 429:
+            r = self._session.request(
+                method,
+                f"{self._base}/{endpoint}",
+                params=params,
+                json=body,
+                timeout=self._timeout,
+            )
+            if r.status_code == 429 and attempt < self.MAX_RETRIES:
+                attempt += 1
                 time.sleep(int(float(r.headers.get("Retry-After", 2))))
                 continue
             r.raise_for_status()
-            return r.json()
+            return r
+
+    def _get(self, endpoint: str, params: dict | None = None) -> Any:
+        return self._request("GET", endpoint, params=params).json()
 
     def _put(self, endpoint: str, body: dict) -> Any:
-        while True:
-            r = self._session.put(f"{self._base}/{endpoint}", json=body)
-            if r.status_code == 429:
-                time.sleep(int(float(r.headers.get("Retry-After", 2))))
-                continue
-            r.raise_for_status()
-            return r.json()
+        return self._request("PUT", endpoint, body=body).json()
 
     def _post(self, endpoint: str, body: dict) -> Any:
-        while True:
-            r = self._session.post(f"{self._base}/{endpoint}", json=body)
-            if r.status_code == 429:
-                time.sleep(int(float(r.headers.get("Retry-After", 2))))
-                continue
-            r.raise_for_status()
-            return r.json()
+        return self._request("POST", endpoint, body=body).json()
 
     # ── Setup ────────────────────────────────────────────────────────────────
 
@@ -111,7 +120,8 @@ class ShopifySync:
         params: dict = {"limit": 250, "fields": "id,variants"}
 
         while True:
-            data = self._get("products.json", params=params)
+            resp = self._request("GET", "products.json", params=params)
+            data = resp.json()
             for product in data.get("products", []):
                 for variant in product.get("variants", []):
                     sku = (variant.get("sku") or "").strip()
@@ -122,11 +132,7 @@ class ShopifySync:
                             "product_id": product["id"],
                         }
 
-            next_page = _parse_next_link(
-                self._session.get(
-                    f"{self._base}/products.json", params=params
-                ).headers.get("Link", "")
-            )
+            next_page = _parse_next_link(resp.headers.get("Link", ""))
             if not next_page:
                 break
             params = {"limit": 250, "fields": "id,variants", "page_info": next_page}
@@ -189,14 +195,16 @@ class ShopifySync:
                     "inventory_policy": "continue" if qty > 0 else "deny"
                 }
                 price_raw = variant.get(fm["price"])
-                if price_raw is not None:
+                has_price = price_raw is not None
+                if has_price:
                     patch["price"] = str(round(float(price_raw), 2))
-                    stats["price_updated"] += 1
 
                 self._put(
                     f"variants/{shopify['variant_id']}.json",
                     {"variant": patch},
                 )
+                if has_price:
+                    stats["price_updated"] += 1
             except Exception as exc:
                 log.warning("Error for SKU %s: %s", sku, exc)
                 stats["errors"] += 1
@@ -292,4 +300,3 @@ def sync_to_shopify(
     ShopifySync(shop_url, access_token, location_id).sync(
         variants, field_map=field_map
     )
-
