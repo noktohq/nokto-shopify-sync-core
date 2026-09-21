@@ -1,6 +1,6 @@
 # nokto-shopify-sync-core
 
-Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Handles rate limiting and pagination automatically, and supports OAuth client-credentials token acquisition.
+Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Retries on HTTP 429 using Shopify's `Retry-After` header, follows `Link` pagination automatically, and supports OAuth client-credentials token acquisition.
 
 ## Installation
 
@@ -53,9 +53,30 @@ print(stats)
 
 Every request times out after 30s by default — override with `ShopifySync(shop_url, access_token, timeout=60)`. Responses rate-limited with `429` are retried automatically (honouring `Retry-After`) up to `ShopifySync.MAX_RETRIES` (5) times, after which the error is raised instead of retrying forever.
 
+## Security boundaries
+
+The Admin API access token is read from `config.json` or environment
+variables and needs write access to Products and Inventory. See
+[SECURITY.md](SECURITY.md) for the full security model and how to report a
+vulnerability.
+
+## Known limitations
+
+- Non-429 errors are not retried; they are caught per-variant, counted in
+  `stats["errors"]`, and logged, and the rest of the batch continues.
+- No dry-run mode — `sync()` writes changes directly to Shopify.
+
 ## Tests
 
 ```bash
 pytest tests/ -v
 ```
+
+## Evidence
+
+- `tests/test_shopify_sync.py` — 8 tests, all passing. HTTP calls are
+  mocked (`unittest.mock.MagicMock`); the suite makes no real network calls
+  and needs no Shopify credentials.
+- CI (`.github/workflows/ci.yml`) runs `pytest tests/ -v` on every push and
+  pull request.
 
