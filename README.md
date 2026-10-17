@@ -1,6 +1,6 @@
 # nokto-shopify-sync-core
 
-Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Retries on HTTP 429 using Shopify's `Retry-After` header, follows `Link` pagination automatically, and supports OAuth client-credentials token acquisition.
+Generic Shopify Admin REST client for syncing inventory quantity and price from external sources. Retries on HTTP 429 using Shopify's `Retry-After` header (bounded), follows `Link` pagination automatically, supports OAuth client-credentials token acquisition and a dry-run mode.
 
 ## Installation
 
@@ -30,7 +30,8 @@ variants = [
     {"sku": "ABC-002", "qty": 0,  "price": 399.0},
 ]
 
-sync_to_shopify(variants, config)
+result = sync_to_shopify(variants, config)                 # writes
+preview = sync_to_shopify(variants, config, dry_run=True)  # reads only
 ```
 
 ### Custom field names
@@ -46,12 +47,37 @@ stats = syncer.sync(
     field_map={"sku": "article_no", "qty": "free_qty", "price": "list_price"},
 )
 print(stats)
-# {"inventory_updated": 42, "price_updated": 38, "not_found": 3, "errors": 0}
+# {"inventory_updated": 42, "price_updated": 38, "not_found": 3, "errors": 0,
+#  "unknown_qty": 1, "conflicts": 2, "would_update": 0}
 ```
+
+### Sync semantics
+
+`sync()` returns a `SyncResult`: still a `dict` of int counters (the four
+original keys are unchanged), plus `result.details` with one entry per input
+row and `result.ok`.
+
+| Situation | What happens | Reported as |
+|---|---|---|
+| `qty` missing, `None`, empty, not an integer (`"abc"`, `2.5`, `NaN`, `True`) | **Unknown, not 0.** Nothing is written for the row (no stock, no price) | `unknown_qty` |
+| `qty` is a valid integer, including `0` | Stock and variant are written | `inventory_updated` |
+| SKU used by more than one Shopify variant | Skipped; no variant wins arbitrarily. See `syncer.sku_conflicts` | `conflicts` |
+| SKU appears more than once in the input | All those rows are skipped | `conflicts` |
+| Invalid price (not a finite number ≥ 0) | Nothing is written for the row | `errors` |
+| HTTP error, or a 2xx body with `errors` / unexpected `available` | Not counted as success | `errors` (`details[].outcome_unknown` is true when the write may still have been applied — reconcile before writing again) |
+| `dry_run=True` | Only GET requests; writes are refused at the HTTP layer | `would_update` |
+
+`result.ok` is false when any row ended in `errors`, `conflicts` or `unknown_qty`.
+Use it to exit non-zero from a scheduled job.
 
 ### Timeouts & retries
 
-Every request times out after 30s by default — override with `ShopifySync(shop_url, access_token, timeout=60)`. Responses rate-limited with `429` are retried automatically (honouring `Retry-After`) up to `ShopifySync.MAX_RETRIES` (5) times, after which the error is raised instead of retrying forever.
+Every request times out after 30s by default — override with `ShopifySync(shop_url, access_token, timeout=60)`.
+
+- Reads (GET) are retried on 429, 500, 502, 503, 504, connection errors and timeouts.
+- Writes (POST/PUT) are retried only on 429, where Shopify did not apply the request. A write that times out, loses its connection or gets a 5xx is **not** retried, because it may have been applied.
+- The wait honours `Retry-After` (seconds; an unparseable value falls back to 2s), is capped at `ShopifySync.MAX_RETRY_WAIT` (60s), and at most `ShopifySync.MAX_RETRIES` (5) retries are made before the error is raised.
+- Pagination stops with an error if Shopify repeats a `page_info` cursor.
 
 ## Security boundaries
 
@@ -62,9 +88,11 @@ vulnerability.
 
 ## Known limitations
 
-- Non-429 errors are not retried; they are caught per-variant, counted in
-  `stats["errors"]`, and logged, and the rest of the batch continues.
-- No dry-run mode — `sync()` writes changes directly to Shopify.
+- Per-variant errors are caught, counted in `errors` and logged, and the rest
+  of the batch continues.
+- Without `location_id`, the first location returned by Shopify is used.
+  Set `location_id` explicitly for stores with more than one location.
+- No guard against an unexpectedly large drop in stock across the batch.
 
 ## Tests
 
@@ -74,9 +102,9 @@ pytest tests/ -v
 
 ## Evidence
 
-- `tests/test_shopify_sync.py` — 8 tests, all passing. HTTP calls are
-  mocked (`unittest.mock.MagicMock`); the suite makes no real network calls
-  and needs no Shopify credentials.
+- `tests/test_shopify_sync.py` — 62 tests, all passing (2026-10-17). HTTP
+  calls are mocked (`unittest.mock.MagicMock`); the suite makes no real
+  network calls and needs no Shopify credentials.
 - CI (`.github/workflows/ci.yml`) runs `pytest tests/ -v` on every push and
   pull request.
 

@@ -27,16 +27,11 @@ public issue for a security report. Do not include a real
 
 ## Known limitations
 
-- `_get`/`_put`/`_post` retry indefinitely on HTTP 429 (rate limit), sleeping
-  for the `Retry-After` header value each time. There is no maximum retry
-  count and no backoff cap — a persistently rate-limited store can make
-  `sync()` run for a long time rather than fail fast.
-- These same HTTP calls have **no request timeout**. Only the OAuth
-  client-credentials token exchange (`_get_token_via_client_credentials`)
-  sets `timeout=10`. A hung connection to Shopify can block `sync()`
-  indefinitely.
-- Non-429 HTTP errors (4xx/5xx) are not retried — `raise_for_status()` raises
-  immediately and the error is caught per-variant in `sync()`, counted in
-  `stats["errors"]`, and logged; the rest of the batch continues.
-- There is no dry-run mode: `sync()` writes inventory and price changes
-  directly.
+- Retries are bounded: at most `MAX_RETRIES` (5) retries, each wait capped at
+  `MAX_RETRY_WAIT` (60s). Reads retry on 429/5xx/connection errors; writes
+  retry only on 429. Every request has a timeout (30s default).
+- A write that fails with a timeout, connection error or 5xx is not retried
+  and is reported with `outcome_unknown: true`; reconcile before writing again.
+- Errors are caught per variant in `sync()`, counted in `errors`, and logged
+  (SKU and error text, at most 300 characters); the rest of the batch continues.
+- `dry_run=True` makes `sync()` read-only.
